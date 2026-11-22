@@ -1,0 +1,8 @@
+# Normalise text files to LF so the sources look the same everywhere;
+# keep batch files CRLF (cmd.exe is happier with them) and binaries untouched.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.exe binary
+*.ico binary
+*.png binary
+*.dll binary

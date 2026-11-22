@@ -10,6 +10,11 @@
 
 界面内置**中文 / English 双语切换**，同一份源码可编译出两个语言的版本。
 
+<p align="center">
+  <img src="docs/clock.png" width="430" alt="悬浮时钟">
+  <img src="docs/settings.png" width="350" alt="设置面板">
+</p>
+
 ---
 
 ## 为什么不用现成的
@@ -77,6 +82,8 @@
 - [Actions](https://github.com/66SHUN66/FloatingClock/actions) 里的 **Artifacts**（每次构建）
 - [Releases](https://github.com/66SHUN66/FloatingClock/releases) 里的 exe（打 `v*` tag 时自动发布）
 
+最新版直接点这里：[**v1.2 下载**](https://github.com/66SHUN66/FloatingClock/releases/latest)。详细用法见 [使用说明](docs/usage-zh.md)。
+
 > `FloatingClock.exe` = 英文界面；`FloatingClock-ZH.exe` = 中文界面。两者是同一份源码的两个构建。
 
 ### 自己编译
@@ -99,12 +106,16 @@ build\build.bat      :: 两个都编
 ```
 FloatingClock/
 ├── src/
-│   ├── FloatingClock.cs    主窗口、绘制、计时逻辑、Win32 调用
-│   ├── SettingsForm.cs     设置面板与全部自绘控件（卡片、开关、滑块、色板、分段选择器）
+│   ├── FloatingClock.cs    Program / Theme / Config / 右键菜单渲染
+│   ├── ClockFormCore.cs    悬浮窗口（上）：字段、计时器、排版与数字绘制
+│   ├── ClockFormUi.cs      悬浮窗口（下）：悬浮工具条、右键菜单、模式与几何
+│   ├── SettingsForm.cs     设置面板
+│   ├── SettingsControls.cs 设置面板的自绘控件（卡片、开关、滑块、色板、分段选择器）
 │   ├── FontPicker.cs       字体下拉框 + 弹出列表（每项用字体本身渲染）
 │   └── Lang.cs             中英文字符串表（中文原文 -> English）
 ├── build/                  一键编译脚本
-├── assets/                 图标（可选）
+├── assets/                 图标
+├── docs/                   界面截图与使用说明
 ├── dist/                   编译产物（不参与版本管理）
 └── .github/workflows/      CI：构建 + 打 tag 发布
 ```
@@ -116,7 +127,7 @@ FloatingClock/
 AddSwitch(c4, L.S("始终置顶"), cfg.Topmost, ...);
 ```
 
-`Lang.cs` 保存 `中文 -> English` 的映射，`L.En` 决定取哪一边；`-Ddefine:EN` 只改变「默认语言」，用户仍可在设置页顶部随时切换。
+`Lang.cs` 保存 `中文 -> English` 的映射，`L.En` 决定取哪一边；`/define:EN` 只改变「默认语言」，用户仍可在设置页顶部随时切换。
 
 ---
 

@@ -11,6 +11,11 @@ One self-contained `.exe` compiled with the C# compiler that ships inside Window
 
 The UI is bilingual: the same source tree builds a Chinese and an English edition.
 
+<p align="center">
+  <img src="docs/clock.png" width="430" alt="Floating clock">
+  <img src="docs/settings.png" width="350" alt="Settings dialog">
+</p>
+
 ---
 
 ## Why not an off-the-shelf timer
@@ -73,6 +78,8 @@ Most presentation timers are rigid: fixed window size, fixed colours, countdown 
 
 `FloatingClock.exe` is the English edition, `FloatingClock-ZH.exe` the Chinese one — same source, two builds.
 
+Latest build: [**v1.2 release**](https://github.com/66SHUN66/FloatingClock/releases/latest). The Chinese user guide lives in [docs/usage-zh.md](docs/usage-zh.md).
+
 **Build it yourself** — only the .NET Framework compiler bundled with Windows is needed, no Visual Studio:
 
 ```bat
@@ -92,12 +99,16 @@ Compiler: `C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe`.
 ```
 FloatingClock/
 ├── src/
-│   ├── FloatingClock.cs    main window, painting, timing, Win32 interop
-│   ├── SettingsForm.cs     settings dialog and all custom-drawn controls
+│   ├── FloatingClock.cs    Program / Theme / Config / context-menu renderer
+│   ├── ClockFormCore.cs    overlay, part 1: fields, timer, layout maths, digit painting
+│   ├── ClockFormUi.cs      overlay, part 2: hover toolbar, menus, modes, geometry
+│   ├── SettingsForm.cs     settings dialog
+│   ├── SettingsControls.cs custom-drawn widgets (card, switch, slider, colour row, segment)
 │   ├── FontPicker.cs       font drop-down with per-font preview
 │   └── Lang.cs             Chinese → English string table
 ├── build/                  one-click build scripts
-├── assets/                 optional icon
+├── assets/                 app icon
+├── docs/                   screenshots and the Chinese user guide
 ├── dist/                   build output (git-ignored)
 └── .github/workflows/      CI: build + release on tag
 ```
@@ -110,7 +121,7 @@ Every user-visible string is written in Chinese in the source and wrapped in the
 AddSwitch(c4, L.S("始终置顶"), cfg.Topmost, ...);
 ```
 
-`Lang.cs` holds the `Chinese -> English` map, `L.En` picks the side. `-Ddefine:EN` only changes the *default* language; the user can still flip it at the top of the settings dialog.
+`Lang.cs` holds the `Chinese -> English` map, `L.En` picks the side. `/define:EN` only changes the *default* language; the user can still flip it at the top of the settings dialog.
 
 ---
 
