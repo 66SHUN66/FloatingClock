@@ -1,0 +1,11 @@
+# build output
+dist/
+assets/app.ico
+
+# local build helpers
+build/*.log
+
+# OS junk
+Thumbs.db
+desktop.ini
+.DS_Store
