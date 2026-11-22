@@ -58,7 +58,7 @@ namespace FloatingClockApp
             d["还原窗口 400×160"] = "Reset window 400×160";
 
             d["倒计时进行中 · 空格暂停"] = "Counting down · Space to pause";
-            d["倒计时已就绱 · 空格开始"] = "Ready · Space to start";
+            d["倒计时已就绪 · 空格开始"] = "Ready · Space to start";
             d["秒表计时中"] = "Stopwatch running";
             d["秒表已暂停"] = "Stopwatch paused";
             d["已超过 "] = "Overtime ";
