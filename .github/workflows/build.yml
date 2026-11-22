@@ -1,0 +1,24 @@
+name: build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compile Chinese and English editions
+        shell: cmd
+        run: build\build.bat
+
+      - name: Upload exe artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: FloatingClock-windows
+          path: dist/*.exe
+          if-no-files-found: error
