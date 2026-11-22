@@ -1,0 +1,50 @@
+name: import-sources
+# One-shot helper: pulls the split source files from the build machine (uploaded
+# as plain files) into src/, checks their byte sizes, then removes itself.
+on:
+  push:
+    paths:
+      - '.github/workflows/import-sources.yml'
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download sources
+        run: |
+          set -euo pipefail
+          mkdir -p src
+          curl -fsSL 'https://aka.doubaocdn.com/s/COPyWEgVjD' -o src/FloatingClock.cs
+          curl -fsSL 'https://aka.doubaocdn.com/s/7Y373MtLpJ' -o src/ClockFormCore.cs
+          curl -fsSL 'https://aka.doubaocdn.com/s/qmIxcDTkNV' -o src/ClockFormUi.cs
+          curl -fsSL 'https://aka.doubaocdn.com/s/iVOArEHesw' -o src/SettingsForm.cs
+          curl -fsSL 'https://aka.doubaocdn.com/s/KdAbsBRyVU' -o src/SettingsControls.cs
+          curl -fsSL 'https://aka.doubaocdn.com/s/KZKELj8g53' -o src/FontPicker.cs
+          curl -fsSL 'https://aka.doubaocdn.com/s/Zii6Ez7Ypl' -o src/Lang.cs
+          rm -f src/FloatingClock.part2.cs
+
+      - name: Verify byte sizes
+        run: |
+          set -euo pipefail
+          check() { actual=$(stat -c %s "$1"); if [ "$actual" != "$2" ]; then echo "SIZE MISMATCH $1: $actual != $2"; exit 1; fi; echo "ok $1 $actual"; }
+          check src/FloatingClock.cs 15295
+          check src/ClockFormCore.cs 23444
+          check src/ClockFormUi.cs 22652
+          check src/SettingsForm.cs 23859
+          check src/SettingsControls.cs 17165
+          check src/FontPicker.cs 8678
+          check src/Lang.cs 5531
+          ls -l src
+
+      - name: Commit and self-destruct
+        run: |
+          set -euo pipefail
+          git config user.name 'SHUN'
+          git config user.email '66SHUN66@users.noreply.github.com'
+          git rm -f .github/workflows/import-sources.yml
+          git add -A src
+          git commit -m 'src: import full sources (Program, window x2, settings x2, font picker, i18n)'
+          git push
