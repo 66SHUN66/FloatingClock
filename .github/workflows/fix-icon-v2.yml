@@ -1,0 +1,62 @@
+name: fix-icon-v2
+# One-shot helper: strictly downloads the icon + .gitignore, commits them, rebuilds
+# both editions and refreshes the v1.2 assets. Fails loudly at every step.
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-icon-v2.yml'
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download icon and .gitignore
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Path assets -Force | Out-Null
+          Invoke-WebRequest -Uri 'https://aka.doubaocdn.com/s/HvzJn1lz2N' -OutFile '.gitignore' -TimeoutSec 60
+          Invoke-WebRequest -Uri 'https://aka.doubaocdn.com/s/SiHSrtcGlN' -OutFile 'assets/app.ico' -TimeoutSec 60
+          $gi = (Get-Item '.gitignore').Length
+          $ico = (Get-Item 'assets/app.ico').Length
+          Write-Host "gitignore=$gi ico=$ico"
+          if ($gi -lt 50) { throw 'gitignore download looks wrong' }
+          if ($ico -ne 16081) { throw "icon download looks wrong: $ico" }
+          if ((Get-Content '.gitignore' -Raw) -match 'assets/app.ico') { throw '.gitignore still ignores the icon' }
+
+      - name: Rebuild both editions
+        shell: cmd
+        run: build\build.bat
+
+      - name: Check the builds
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Get-ChildItem dist/*.exe | ForEach-Object { Write-Host "$($_.Name) $($_.Length) bytes" }
+          foreach ($f in Get-ChildItem dist/*.exe) {
+            if ($f.Length -lt 88000) { throw "$($f.Name) is $($f.Length) bytes - the icon was not embedded" }
+          }
+
+      - name: Commit and self-destruct
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git config user.name 'SHUN'
+          git config user.email '66SHUN66@users.noreply.github.com'
+          git rm -f .github/workflows/fix-icon-v2.yml
+          git add -f .gitignore assets/app.ico
+          git commit -m 'build: ship the app icon so the exe carries it'
+          git push
+
+      - name: Refresh the v1.2 assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.2
+          name: FloatingClock v1.2
+          files: dist/*.exe
+          overwrite_files: true
