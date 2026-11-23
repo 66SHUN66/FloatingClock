@@ -1,6 +1,5 @@
 # build output
 dist/
-assets/app.ico
 
 # local build helpers
 build/*.log
