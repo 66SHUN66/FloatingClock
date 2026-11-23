@@ -158,3 +158,40 @@ caption=            ; 底部文字，留空 = 自动文案，支持 {date} {time
 
 **Q：底部那行字能换成我自己的话吗？**
 能，设置页「底部文字」卡片里随便填，支持 `{date} {time} {mode} {status} {over}` 五个占位符；清空就恢复自动文案。
+
+
+---
+
+## 10. 英文版与 GitHub
+
+同一份源码编译出两个语言版本，文件名决定它是哪一个：
+
+| 可执行文件 | 界面语言 | 配置文件（互不干扰） |
+| --- | --- | --- |
+| `悬浮时钟.exe`（仓库构建产物叫 `FloatingClock-ZH.exe`） | 中文 | `%APPDATA%\FloatingClock\config.ini` |
+| `FloatingClock.exe` | English | `%APPDATA%\FloatingClock\config-en.ini` |
+
+两个版本可以同时开着用：配置分开存，语言和窗口位置都不会互相踩。
+
+也可以直接在界面里换：设置页最上方「语言 / Language」分段控件点一下，整个对话框立刻按新语言重建（中文版里切成 English、英文版里切回中文都行），选择写进配置文件，下次启动沿用。
+英文版里快捷键表是 4 行版式（比中文多一行 `Ctrl+Alt+R: reset`），设置页顶部名称按语言自适应宽度，这些都已经按英文重新排过。
+
+**仓库与下载**
+
+- 源码：<https://github.com/66SHUN66/FloatingClock>（MIT 许可）
+- 直接下载：<https://github.com/66SHUN66/FloatingClock/releases/latest>
+- 英文 README：仓库里的 `README_EN.md`
+
+**源码结构**（`src\` 下 7 个文件，一一对应）
+
+| 文件 | 内容 |
+| --- | --- |
+| `FloatingClock.cs` | Program / Theme / Config / 右键菜单渲染 |
+| `ClockFormCore.cs` | 悬浮窗口（上）：字段、计时器、排版与数字绘制 |
+| `ClockFormUi.cs` | 悬浮窗口（下）：悬浮工具条、右键菜单、模式切换、几何 |
+| `SettingsForm.cs` | 设置面板本体 |
+| `SettingsControls.cs` | 设置面板的自绘控件（卡片 / 开关 / 滑块 / 色板 / 分段选择器） |
+| `FontPicker.cs` | 字体下拉框 |
+| `Lang.cs` | 中英文字符串表 |
+
+编译脚本仍是第 8 节那三个；`build\build-en.bat` 与中文版的唯一差别是多了 `/define:EN`，它只改默认语言，不改任何其它行为。
