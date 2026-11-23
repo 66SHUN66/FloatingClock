@@ -1,0 +1,54 @@
+name: publish-v1.3.2
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/sync-v132.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download source bundle
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri 'https://aka.doubaocdn.com/s/QZUT85JwNF' -OutFile "$env:RUNNER_TEMP\bundle.zip"
+          Expand-Archive -Path "$env:RUNNER_TEMP\bundle.zip" -DestinationPath "$env:RUNNER_TEMP\bundle" -Force
+          Get-ChildItem "$env:RUNNER_TEMP\bundle" -Recurse | Select-Object FullName
+
+      - name: Apply bundle to repository
+        shell: pwsh
+        run: |
+          $b = Join-Path $env:RUNNER_TEMP 'bundle'
+          Copy-Item (Join-Path $b 'src\*.cs') 'src' -Force
+          Copy-Item (Join-Path $b 'README.md') 'README.md' -Force
+          Copy-Item (Join-Path $b 'README_EN.md') 'README_EN.md' -Force
+          Copy-Item (Join-Path $b 'usage-zh.md') 'docs\usage-zh.md' -Force
+          Copy-Item (Join-Path $b 'app.ico') 'assets\app.ico' -Force
+
+      - name: Build both editions
+        shell: cmd
+        run: build\build.bat
+
+      - name: Commit source
+        shell: pwsh
+        run: |
+          git config user.name '66SHUN66'
+          git config user.email '3049996192@qq.com'
+          git add src README.md README_EN.md docs/usage-zh.md assets/app.ico
+          git commit -m 'v1.3.2: detect WPS (wpp.exe) shows, add any-full-screen auto start'
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git push origin HEAD:main
+          $files = @('dist\FloatingClock-ZH.exe','dist\FloatingClock.exe')
+          gh release create v1.3.2 --title 'v1.3.2' --generate-notes --target main $files
