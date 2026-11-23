@@ -59,6 +59,7 @@ namespace FloatingClockApp
 
             d["倒计时进行中 · 空格暂停"] = "Counting down · Space to pause";
             d["倒计时已就绪 · 空格开始"] = "Ready · Space to start";
+            d["准备开始 · 空格取消"] = "Get ready · Space to cancel";
             d["秒表计时中"] = "Stopwatch running";
             d["秒表已暂停"] = "Stopwatch paused";
             d["已超过 "] = "Overtime ";
@@ -104,12 +105,23 @@ namespace FloatingClockApp
             d["窗口行为"] = "Window behaviour";
             d["锁定位置和大小"] = "Lock position & size";
             d["点击穿透（不挡 PPT 操作）"] = "Click-through (clicks reach the slides)";
+            d["穿透后右侧仍保留“设置 / 关闭”两个圆圈，可以直接点"] =
+                "Click-through keeps two circles on the right: settings and quit";
+            d["开始放映后才自动倒计时（最大化窗口不算）"] =
+                "Only a real slideshow starts the timer (a maximised window does not)";
             d["PPT / PDF 放映自动开始倒计时"] = "Auto-start on PPT / PDF presentation";
+            d["任意窗口全屏时自动开始倒计时"] = "Auto-start when any window goes full screen";
+            d["除上面两条外，任何窗口铺满整屏（无标题栏）也算开始"] =
+                "Besides the two above: any frameless window covering the whole screen counts as started";
             d["窗口大小"] = "Window size";
             d["居中显示"] = "Centre on screen";
             d["恢复默认尺寸"] = "Default size";
 
             d["倒计时时长"] = "Countdown length";
+            d["开始前预备"] = "Get-ready countdown";
+            d["关"] = "Off";
+            d["预备秒数：开始后先倒数 N 秒，再进入正式倒计时"] =
+                "Pre-roll: count N seconds first, then the real countdown";
             d["精确到 1 秒"] = "1-second steps";
             d["分"] = " min";
             d["到时响铃（默认关闭）"] = "Beep at zero (off by default)";

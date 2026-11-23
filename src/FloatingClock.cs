@@ -1,4 +1,4 @@
-﻿// ===========================================================================
+// ===========================================================================
 //  FloatingClock  --  悬浮时钟  (clock / countdown / stopwatch overlay)
 //  Part 1 of 3: Program / Theme / Config and the menu renderer.
 //  A borderless, always-on-top desktop widget.  Compiled to a single .exe with
@@ -39,7 +39,7 @@ namespace FloatingClockApp
         public static bool OpenSettingsOnStart = false;
 
         // Shown in the settings header, the footer and the taskbar tooltip.
-        public const string Ver = "1.2";
+        public const string Ver = "1.3.2";
         public const string Author = "SHUN";
 
         // Language baked into this build; a config value can override it at run time.
@@ -192,7 +192,16 @@ namespace FloatingClockApp
         public bool Locked = false;
         public bool ClickThrough = false;
         public bool PptAuto = false;
+        // Second trigger, independent of the PPT/PDF rule: any frameless window that
+        // covers the whole screen (a full-screen video, a viewer, anything) starts
+        // the countdown. Off by default? No - it is what most people mean by
+        // "my talk started", so it ships on and can be switched off.
+        public bool FullAuto = true;
         public int CountdownSecs = 300;
+        // "Get ready" countdown that runs before the real countdown starts, so a
+        // speaker can click "play" and only then walk to the first slide.
+        // 0 = start counting immediately.
+        public int PreRoll = 3;
         // silent by default: a beep during a presentation is the last thing you want
         public bool Beep = false;
         public bool WarnRed = true;
@@ -252,7 +261,9 @@ namespace FloatingClockApp
                         case "locked": c.Locked = Bool(v, c.Locked); break;
                         case "clickthrough": c.ClickThrough = Bool(v, c.ClickThrough); break;
                         case "pptauto": c.PptAuto = Bool(v, c.PptAuto); break;
+                        case "fullauto": c.FullAuto = Bool(v, c.FullAuto); break;
                         case "countdownsecs": c.CountdownSecs = Int(v, c.CountdownSecs); break;
+                        case "preroll": c.PreRoll = Int(v, c.PreRoll); break;
                         case "beep": c.Beep = Bool(v, c.Beep); break;
                         case "warnred": c.WarnRed = Bool(v, c.WarnRed); break;
                         case "flashcolon": c.FlashColon = Bool(v, c.FlashColon); break;
@@ -293,7 +304,9 @@ namespace FloatingClockApp
                 lines.Add("locked=" + Locked);
                 lines.Add("clickthrough=" + ClickThrough);
                 lines.Add("pptauto=" + PptAuto);
+                lines.Add("fullauto=" + FullAuto);
                 lines.Add("countdownsecs=" + CountdownSecs);
+                lines.Add("preroll=" + PreRoll);
                 lines.Add("beep=" + Beep);
                 lines.Add("warnred=" + WarnRed);
                 lines.Add("flashcolon=" + FlashColon);

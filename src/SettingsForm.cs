@@ -1,4 +1,4 @@
-﻿// ===========================================================================
+// ===========================================================================
 //  Settings window + hand-drawn dark UI controls for FloatingClock
 //  (dialog itself; the dark UI controls live in SettingsControls.cs)
 // ===========================================================================
@@ -39,6 +39,7 @@ namespace FloatingClockApp
         private FontPicker picker;
         private Slider sldSize;
         private Slider sldDur;
+        private Slider sldPre;
 
         public SettingsForm(ClockForm h)
         {
@@ -386,7 +387,7 @@ namespace FloatingClockApp
             c35.Controls.Add(capHint3);
 
             // --- 5. window behaviour ---------------------------------------
-            Card c4 = AddCard(L.S("窗口行为"), 254);
+            Card c4 = AddCard(L.S("窗口行为"), 350);
             AddSwitch(c4, L.S("始终置顶"), cfg.Topmost, delegate(object s, EventArgs e)
             {
                 cfg.Topmost = ((Switch)s).Checked; host.ApplyLook();
@@ -399,13 +400,26 @@ namespace FloatingClockApp
             {
                 cfg.ClickThrough = ((Switch)s).Checked; host.ApplyLook();
             }, 18, 96, 508);
+            Label thruHint = MakeLabel(L.S("穿透后右侧仍保留“设置 / 关闭”两个圆圈，可以直接点"), true, 18, 124, 508, 18);
+            c4.Controls.Add(thruHint);
+
             AddSwitch(c4, L.S("PPT / PDF 放映自动开始倒计时"), cfg.PptAuto, delegate(object s, EventArgs e)
             {
                 cfg.PptAuto = ((Switch)s).Checked; host.ApplyLook();
-            }, 18, 124, 508);
+            }, 18, 146, 508);
+            Label autoHint = MakeLabel(L.S("开始放映后才自动倒计时（最大化窗口不算）"), true, 18, 174, 508, 18);
+            c4.Controls.Add(autoHint);
+
+            // independent second trigger: any window that owns the whole screen
+            AddSwitch(c4, L.S("任意窗口全屏时自动开始倒计时"), cfg.FullAuto, delegate(object s, EventArgs e)
+            {
+                cfg.FullAuto = ((Switch)s).Checked; host.ApplyLook();
+            }, 18, 202, 508);
+            Label anyFullHint = MakeLabel(L.S("除上面两条外，任何窗口铺满整屏（无标题栏）也算开始"), true, 18, 230, 508, 18);
+            c4.Controls.Add(anyFullHint);
 
             // dedicated resize slider: one place to set the widget size exactly
-            Slider winSize = AddSlider(c4, L.S("窗口大小"), 40, 400, host.WindowScalePercent, 18, 158, 508);
+            Slider winSize = AddSlider(c4, L.S("窗口大小"), 40, 400, host.WindowScalePercent, 18, 252, 508);
             winSize.Suffix = "%";
             winSize.BeforeChange = delegate(int v)
             {
@@ -413,7 +427,7 @@ namespace FloatingClockApp
             };
 
             Button bCenter = MakeButton(L.S("居中显示"), false);
-            bCenter.SetBounds(18, 214, 120, 30);
+            bCenter.SetBounds(18, 300, 120, 30);
             bCenter.Click += delegate
             {
                 Rectangle wa = Screen.FromControl(host).WorkingArea;
@@ -426,7 +440,7 @@ namespace FloatingClockApp
             c4.Controls.Add(bCenter);
 
             Button bReset = MakeButton(L.S("恢复默认尺寸"), false);
-            bReset.SetBounds(146, 214, 150, 30);
+            bReset.SetBounds(146, 300, 150, 30);
             bReset.Click += delegate
             {
                 host.ResetToDefaultSize();
@@ -437,7 +451,7 @@ namespace FloatingClockApp
             c4.Controls.Add(bReset);
 
             // --- 6. countdown ---------------------------------------------
-            Card c5 = AddCard(L.S("倒计时"), 250);
+            Card c5 = AddCard(L.S("倒计时"), 320);
             sldDur = AddSlider(c5, L.S("倒计时时长"), 15, 3600, cfg.CountdownSecs, 18, 40, 508);
             sldDur.Step = 1;                 // 1 s precision, not 5 s
             sldDur.Format = delegate(int v) { return string.Format("{0}:{1:00}", v / 60, v % 60); };
@@ -484,18 +498,30 @@ namespace FloatingClockApp
                 c5.Controls.Add(b);
             }
 
+            // "get ready" seconds in front of the real countdown (0 = off)
+            sldPre = AddSlider(c5, L.S("开始前预备"), 0, 10, cfg.PreRoll, 18, 160, 508);
+            sldPre.Format = delegate(int v) { return v <= 0 ? L.S("关") : v + " s"; };
+            sldPre.BeforeChange = delegate(int v)
+            {
+                cfg.PreRoll = v;
+                host.ApplyLook();
+            };
+
             AddSwitch(c5, L.S("到时响铃（默认关闭）"), cfg.Beep, delegate(object s, EventArgs e)
             {
                 cfg.Beep = ((Switch)s).Checked; host.ApplyLook();
-            }, 18, 160, 508, false);
+            }, 18, 228, 508, false);
             AddSwitch(c5, L.S("最后 20% 变红"), cfg.WarnRed, delegate(object s, EventArgs e)
             {
                 cfg.WarnRed = ((Switch)s).Checked; host.ApplyLook();
-            }, 18, 188, 508, false);
+            }, 18, 256, 508, false);
             AddSwitch(c5, L.S("冒号每分钟闪烁"), cfg.FlashColon, delegate(object s, EventArgs e)
             {
                 cfg.FlashColon = ((Switch)s).Checked; host.ApplyLook();
-            }, 18, 216, 508, false);
+            }, 18, 284, 508, false);
+
+            Label preHint = MakeLabel(L.S("预备秒数：开始后先倒数 N 秒，再进入正式倒计时"), true, 18, 204, 508, 18);
+            c5.Controls.Add(preHint);
 
             // --- footer ----------------------------------------------------
             Button done = MakeButton(L.S("完成"), true);

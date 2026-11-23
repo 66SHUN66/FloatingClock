@@ -127,7 +127,11 @@ namespace FloatingClockApp
         protected override void OnMouseMove(MouseEventArgs e)
         {
             base.OnMouseMove(e);
-            if (cfg.ClickThrough) return;
+            if (cfg.ClickThrough)
+            {
+                Cursor = PodHit(e.Location) ? Cursors.Hand : Cursors.Default;
+                return;
+            }
 
             lastMove = DateTime.Now;
             if (!dragging && !resizing)
@@ -176,7 +180,16 @@ namespace FloatingClockApp
         protected override void OnMouseDown(MouseEventArgs e)
         {
             base.OnMouseDown(e);
-            if (cfg.ClickThrough) return;
+            if (cfg.ClickThrough)
+            {
+                // only the two escape-hatch circles ever receive a click here
+                if (e.Button == MouseButtons.Left)
+                {
+                    if (podClose.Width > 0 && podClose.Contains(e.Location)) { Close(); return; }
+                    if (podSettings.Width > 0 && podSettings.Contains(e.Location)) { OpenSettings(); return; }
+                }
+                return;
+            }
 
             if (e.Button == MouseButtons.Left)
             {
@@ -306,6 +319,7 @@ namespace FloatingClockApp
         {
             if (mode == Mode.Countdown)
             {
+                if (preRunning) { ResetCountdown(); Invalidate(); return; }  // space cancels the pre-roll
                 if (cdDone || cdLeft <= 0) ResetCountdown();
                 if (cdRunning) cdRunning = false;
                 else { cdEnd = DateTime.Now.AddSeconds(cdLeft); cdRunning = true; cdDone = false; }
@@ -327,6 +341,7 @@ namespace FloatingClockApp
 
         private void ResetCountdown()
         {
+            preRunning = false;
             cdTotal = Math.Max(1, cfg.CountdownSecs);
             cdLeft = cdTotal;
             cdRunning = false;
@@ -387,8 +402,18 @@ namespace FloatingClockApp
         {
             SetMode(Mode.Countdown);
             ResetCountdown();
-            cdEnd = DateTime.Now.AddSeconds(cdLeft);
-            cdRunning = true;
+            if (cfg.PreRoll > 0)
+            {
+                // give the speaker a few seconds to reach the first slide
+                preTotal = cfg.PreRoll;
+                preEnd = DateTime.Now.AddSeconds(preTotal);
+                preRunning = true;
+            }
+            else
+            {
+                cdEnd = DateTime.Now.AddSeconds(cdLeft);
+                cdRunning = true;
+            }
             Invalidate();
         }
 
@@ -479,27 +504,74 @@ namespace FloatingClockApp
         private struct RECT { public int Left, Top, Right, Bottom; }
         [DllImport("user32.dll")]
         private static extern bool GetWindowRect(IntPtr hWnd, out RECT r);
+        [DllImport("user32.dll")]
+        private static extern int GetWindowThreadProcessId(IntPtr hWnd, out int pid);
 
         private bool insideSlideshow;
+        private DateTime showSince = DateTime.MinValue;
 
-        // Class names of the slideshow / full-screen presentation windows we know.
-        private static readonly string[] SlideClasses = {
-            "screenClass",      // PowerPoint
-            "PPTFrameClass",
-            "wppScreen",        // WPS 演示
-            "KWppScreen",
-            "KWppFrame",
-            "AcrobatSDIWindow", // Adobe Acrobat full screen
-            "classFoxitReader", // Foxit Reader / Editor full screen
-            "ApolloRuntimeContentWindow" // 福昕新版
+        // Real slideshow windows. The *frame* classes (PPTFrameClass / KWppFrame /
+        // PP12FrameClass) deliberately stay out of this list: a maximised editor is
+        // exactly the case where the timer used to start without a show.
+        private static readonly string[] ShowClasses = {
+            "screenClass",      // PowerPoint 放映
+            "wppScreen",        // WPS 演示放映（旧版）
+            "KWppScreen"        // WPS 演示放映（更旧）
         };
+
+        // Full-screen PDF viewers. A PDF only counts while it is really being
+        // presented: frameless, covering the whole screen including the taskbar.
+        private static readonly string[] PdfClasses = {
+            "AcrobatSDIWindow",          // Acrobat / Reader 全屏阅读
+            "classFoxitReader",          // Foxit Reader / Editor 全屏
+            "ApolloRuntimeContentWindow",// 福昕新版
+            "Chrome_WidgetWin_1",        // Edge / Chrome 全屏（含 PDF）
+            "MozillaWindowClass"         // Firefox 全屏
+        };
+
+        private static bool IsFrameless(IntPtr h)
+        {
+            int style = GetWindowLong(h, GWL_STYLE);
+            return (style & WS_CAPTION) == 0;
+        }
+
+        // Frameless + full-screen but never a talk: the desktop, the taskbar,
+        // Task View / Alt-Tab overlays, the IME flyout.
+        private static readonly string[] ShellClasses = {
+            "Progman", "WorkerW", "Shell_TrayWnd", "Windows.UI.Core.CoreWindow",
+            "XamlExplorerHostIslandWindow", "MultitaskingViewFrame", "TaskSwitcherWnd"
+        };
+
+        private static bool IsShell(string cls)
+        {
+            foreach (string c in ShellClasses)
+                if (cls == c) return true;
+            return false;
+        }
+
+        // New WPS (2021+) draws its slideshow with Qt, so every WPS window has the
+        // same class name "Qt5QWindowIcon" and the class alone cannot tell a show
+        // from an editor. The owning process can:  wpp.exe = WPS 演示, wps.exe /
+        // wpspdf.exe = their PDF reader.
+        private static string ProcessName(IntPtr h)
+        {
+            try
+            {
+                int pid = 0;
+                GetWindowThreadProcessId(h, out pid);
+                if (pid <= 0) return "";
+                using (System.Diagnostics.Process p = System.Diagnostics.Process.GetProcessById(pid))
+                    return p.ProcessName.ToLowerInvariant();
+            }
+            catch (Exception) { return ""; }
+        }
 
         private void OnWatchSlideshow(object sender, EventArgs e)
         {
             try
             {
                 IntPtr h = GetForegroundWindow();
-                if (h == IntPtr.Zero) { insideSlideshow = false; return; }
+                if (h == IntPtr.Zero || h == Handle) { insideSlideshow = false; showSince = DateTime.MinValue; return; }
 
                 System.Text.StringBuilder sb = new System.Text.StringBuilder(256);
                 GetClassName(h, sb, 256);
@@ -509,38 +581,74 @@ namespace FloatingClockApp
                 GetWindowText(h, tb, 512);
                 string title = tb.ToString().ToLowerInvariant();
 
-                bool slide = false;
-                foreach (string c in SlideClasses)
-                    if (cls == c) { slide = true; break; }
+                bool isShow = false;
+                foreach (string c in ShowClasses)
+                    if (cls == c) { isShow = true; break; }
 
-                // Any window showing a PDF at full screen counts as a presentation:
-                // Edge / Chrome / Reader / WPS PDF all keep ".pdf" in their title.
-                bool pdfFullscreen = title.Contains(".pdf");
+                string proc = (isShow || cls == "Qt5QWindowIcon") ? ProcessName(h) : "";
+
+                // WPS 演示 (wpp.exe) 的放映窗口是 Qt 窗口，类名与编辑器相同，
+                // 只能靠「进程名 + 无边框 + 铺满整屏」这三条一起判定。
+                if (!isShow && cls == "Qt5QWindowIcon" && proc == "wpp") isShow = true;
+
+                bool isPdf = false;
+                if (!isShow && title.Contains(".pdf") && IsFrameless(h))
+                {
+                    foreach (string c in PdfClasses)
+                        if (cls == c) { isPdf = true; break; }
+                    // WPS 的 PDF 全屏阅读同样是 Qt 窗口
+                    if (!isPdf && cls == "Qt5QWindowIcon" &&
+                        (proc == "wpspdf" || proc == "wps" || proc == "wpp")) isPdf = true;
+                }
+
+                // A show is only a show when it really fills the screen - taskbar
+                // area included. A maximised window keeps a title bar and stops
+                // above the taskbar, so it never qualifies.
                 bool full = false;
-                if (slide || pdfFullscreen)
+                if (isShow || isPdf)
                 {
                     RECT r;
                     if (GetWindowRect(h, out r))
                     {
-                        Rectangle wa = Screen.FromHandle(h).Bounds;
+                        Rectangle mon = Screen.FromHandle(h).Bounds;
                         int w = r.Right - r.Left, hh = r.Bottom - r.Top;
-                        // slideshows only need to be screen-wide; PDF "full screen"
-                        // must really cover the screen in both directions
-                        full = slide ? w >= wa.Width * 0.9 : (w >= wa.Width * 0.9 && hh >= wa.Height * 0.9);
+                        full = w >= mon.Width * 0.97 && hh >= mon.Height * 0.97;
                     }
                 }
 
-                if (full)
+                // Second, independent trigger (switchable): anything that owns the
+                // whole screen and has no title bar counts as "the talk has begun".
+                bool anyFull = false;
+                if (cfg.FullAuto && !full && !IsShell(cls) && IsFrameless(h))
                 {
-                    if (!insideSlideshow)
+                    RECT r2;
+                    if (GetWindowRect(h, out r2))
+                    {
+                        Rectangle mon2 = Screen.FromHandle(h).Bounds;
+                        int w2 = r2.Right - r2.Left, h2 = r2.Bottom - r2.Top;
+                        anyFull = w2 >= mon2.Width * 0.97 && h2 >= mon2.Height * 0.97;
+                    }
+                }
+
+                if (full || anyFull)
+                {
+                    if (showSince == DateTime.MinValue) showSince = DateTime.Now;
+                    // require the state to hold for a moment: no start on Alt-Tab
+                    // flicker, no start while a window is still sizing itself.
+                    if (!insideSlideshow && (DateTime.Now - showSince).TotalSeconds >= 1.2)
                     {
                         insideSlideshow = true;
-                        if (cfg.PptAuto) StartCountdown();
+                        // The generic "any full-screen window" switch is a superset:
+                        // with it on, a real show starts even if the PPT/PDF switch
+                        // is off.
+                        bool wantStart = (isShow || isPdf) ? (cfg.PptAuto || cfg.FullAuto) : cfg.FullAuto;
+                        if (wantStart) StartCountdown();
                     }
                 }
                 else
                 {
                     insideSlideshow = false;
+                    showSince = DateTime.MinValue;
                 }
             }
             catch (Exception) { }

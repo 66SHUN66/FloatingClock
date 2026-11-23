@@ -24,9 +24,13 @@ namespace FloatingClockApp
     internal partial class ClockForm : Form
     {
         private const int WM_HOTKEY = 0x0312;
+        private const int WM_NCHITTEST = 0x0084;
+        private const int HTTRANSPARENT = -1;
         private const int GWL_EXSTYLE = -20;
+        private const int GWL_STYLE = -16;
         private const int WS_EX_TRANSPARENT = 0x20;
         private const int WS_EX_LAYERED = 0x80000;
+        private const int WS_CAPTION = 0x00C00000;
         private const int MOD_ALT = 1, MOD_CONTROL = 2, MOD_NOREPEAT = 0x4000;
 
         public enum Mode { Clock, Countdown, Stopwatch }
@@ -39,6 +43,11 @@ namespace FloatingClockApp
         private DateTime cdEnd;
         private DateTime cdDoneAt;              // when 00:00 was reached (overtime base)
         private bool cdRunning, cdDone;
+
+        // "get ready" pre-roll that runs before the real countdown ----------
+        private bool preRunning;
+        private DateTime preEnd;
+        private int preTotal;
 
         // stopwatch -------------------------------------------------------
         private double swBase, swElapsed;
@@ -56,6 +65,11 @@ namespace FloatingClockApp
         private readonly List<Rectangle> btnRects = new List<Rectangle>();
         private readonly List<string> btnTexts = new List<string>();
         private readonly List<Action> btnActions = new List<Action>();
+
+        // click-through escape hatches: two small circles that stay clickable
+        // even when the window itself ignores every other mouse event.
+        private Rectangle podSettings = Rectangle.Empty;
+        private Rectangle podClose = Rectangle.Empty;
 
         // drawing cache ---------------------------------------------------
         private string fitKey = "";
@@ -178,13 +192,24 @@ namespace FloatingClockApp
         {
             try
             {
+                // WS_EX_TRANSPARENT is NOT used any more: it switches off hit
+                // testing for the whole window, which also killed the two
+                // "escape hatch" circles. Instead the window answers every
+                // WM_NCHITTEST with HTTRANSPARENT except over those circles,
+                // so the mouse falls through to PowerPoint everywhere else but
+                // the buttons stay usable.
                 int ex = GetWindowLong(Handle, GWL_EXSTYLE);
-                if (cfg.ClickThrough) ex |= WS_EX_TRANSPARENT | WS_EX_LAYERED;
-                else ex &= ~WS_EX_TRANSPARENT;
+                ex &= ~WS_EX_TRANSPARENT;
                 SetWindowLong(Handle, GWL_EXSTYLE, ex);
                 Opacity = Math.Max(0.35, Math.Min(1.0, cfg.Alpha));
             }
             catch (Exception) { }
+        }
+
+        private bool PodHit(Point p)
+        {
+            return (podSettings.Width > 0 && podSettings.Contains(p)) ||
+                   (podClose.Width > 0 && podClose.Contains(p));
         }
 
         protected override void WndProc(ref Message m)
@@ -196,6 +221,18 @@ namespace FloatingClockApp
                 else if (id == 2) ToggleRun();
                 else if (id == 3) ResetCurrent();
                 return;
+            }
+            if (m.Msg == WM_NCHITTEST && cfg.ClickThrough)
+            {
+                // lParam holds the screen point (12.5 fixed pixel coordinates).
+                int lp = m.LParam.ToInt32();
+                Point screen = new Point((short)(lp & 0xFFFF), (short)((lp >> 16) & 0xFFFF));
+                Point client = PointToClient(screen);
+                if (!PodHit(client))
+                {
+                    m.Result = (IntPtr)HTTRANSPARENT;   // hand the click to the app below
+                    return;
+                }
             }
             base.WndProc(ref m);
         }
@@ -213,6 +250,19 @@ namespace FloatingClockApp
         private void OnTick(object sender, EventArgs e)
         {
             DateTime now = DateTime.Now;
+            if (preRunning)
+            {
+                if ((preEnd - now).TotalSeconds <= 0)
+                {
+                    // pre-roll over: the real countdown takes over from full length
+                    preRunning = false;
+                    cdDone = false;
+                    cdDoneAt = DateTime.MinValue;
+                    cdLeft = Math.Max(1, cdTotal);
+                    cdEnd = now.AddSeconds(cdLeft);
+                    cdRunning = true;
+                }
+            }
             if (cdRunning)
             {
                 cdLeft = (cdEnd - now).TotalSeconds;
@@ -285,6 +335,20 @@ namespace FloatingClockApp
             }
             else if (mode == Mode.Countdown)
             {
+                if (preRunning)
+                {
+                    // "get ready" phase: one huge number, then the real countdown
+                    double pre = Math.Max(0, (preEnd - DateTime.Now).TotalSeconds);
+                    big = ((int)Math.Ceiling(pre + 1e-6)).ToString();
+                    status = L.S("准备开始 · 空格取消");
+                    small = status;
+                    double preProgress = preTotal > 0 ? pre / preTotal : 0;
+                    if (preProgress < 0) preProgress = 0;
+                    if (preProgress > 1) preProgress = 1;
+                    progress = preProgress;
+                }
+                else
+                {
                 int left = (int)Math.Ceiling(cdLeft - 1e-6);
                 if (left < 0) left = 0;
                 if (cdTotal >= 3600)
@@ -311,6 +375,7 @@ namespace FloatingClockApp
                 progress = cdTotal > 0 ? cdLeft / cdTotal : 0;
                 if (progress < 0) progress = 0;
                 if (progress > 1) progress = 1;
+                }
             }
             else
             {
@@ -368,6 +433,7 @@ namespace FloatingClockApp
 
             DrawBar(g);
             DrawGrip(g);
+            DrawPod(g);
         }
 
         private float FitSize(Graphics g, string text)
@@ -554,6 +620,62 @@ namespace FloatingClockApp
                     float m = 4 * Program.DpiScale;
                     g.DrawLine(p, Width - d - m, Height - m, Width - m, Height - d - m);
                 }
+            }
+        }
+
+        // Two always-clickable circles on the right edge, drawn only while
+        // click-through is on. Top = settings, bottom = quit.
+        private void DrawPod(Graphics g)
+        {
+            podSettings = Rectangle.Empty;
+            podClose = Rectangle.Empty;
+            if (!cfg.ClickThrough) return;
+
+            float dpi = Program.DpiScale;
+            int d = (int)Math.Max(16 * dpi, Math.Min(30 * dpi, Height * 0.24f));
+            int gap = (int)(5 * dpi);
+            int x = Width - d - (int)(5 * dpi);
+            int cy = Height / 2;
+            Rectangle rS = new Rectangle(x, cy - d - gap / 2, d, d);
+            Rectangle rC = new Rectangle(x, cy + gap / 2, d, d);
+            if (rS.Top < 2) { rS.Y = 2; rC.Y = rS.Bottom + gap; }
+            if (rC.Bottom > Height - 2) { rC.Y = Height - 2 - d; rS.Y = rC.Top - gap - d; }
+            podSettings = rS;
+            podClose = rC;
+
+            Color bg = Theme.FromHex(cfg.Bg);
+            Color fg = Theme.FromHex(cfg.Fg);
+            Color fill = Theme.Blend(bg, fg, 0.30);
+            Color line = Theme.Blend(bg, fg, 0.62);
+
+            foreach (Rectangle r in new Rectangle[] { rS, rC })
+            {
+                using (SolidBrush b = new SolidBrush(fill))
+                    g.FillEllipse(b, r);
+                using (Pen p = new Pen(line, Math.Max(1f, dpi)))
+                    g.DrawEllipse(p, r);
+            }
+
+            float pw = Math.Max(1.2f, d / 12f);
+            using (Pen p = new Pen(fg, pw))
+            using (SolidBrush b = new SolidBrush(fg))
+            {
+                // settings: three sliders with knobs
+                float x0 = rS.Left + d * 0.24f, x1 = rS.Right - d * 0.24f;
+                float h = d * 0.44f, y0 = rS.Top + (d - h) / 2f;
+                float[] knob = { 0.30f, 0.68f, 0.44f };
+                for (int i = 0; i < 3; i++)
+                {
+                    float yy = y0 + h * i / 2f;
+                    g.DrawLine(p, x0, yy, x1, yy);
+                    float kx = x0 + (x1 - x0) * knob[i];
+                    float kw = Math.Max(1.6f, d * 0.10f);
+                    g.FillRectangle(b, kx - kw / 2, yy - kw * 0.7f, kw, kw * 1.4f);
+                }
+                // close: a cross
+                float i0 = d * 0.26f;
+                g.DrawLine(p, rC.Left + i0, rC.Top + i0, rC.Right - i0, rC.Bottom - i0);
+                g.DrawLine(p, rC.Right - i0, rC.Top + i0, rC.Left + i0, rC.Bottom - i0);
             }
         }
     }
