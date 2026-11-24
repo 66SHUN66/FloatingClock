@@ -1,4 +1,4 @@
-# 悬浮时钟 FloatingClock · v1.3.2
+# 悬浮时钟 FloatingClock · v1.3.3
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-ff6700.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011-0078d4.svg)](#)
@@ -58,7 +58,7 @@
   - PowerPoint：必须是放映窗口 `screenClass`，无标题栏，且**铺满整屏（含任务栏，≥97%）**
   - WPS 演示（v1.3.1 修）：新版放映窗口是 Qt 窗口（`Qt5QWindowIcon`，和编辑器类名无关），改按「进程 `wpp.exe` + 无边框 + 铺满整屏」判定；编辑器最大化（`PP12FrameClass`，只到工作区）不会起表
   - PDF 全屏：Acrobat、福昕、WPS PDF、Edge / Chrome —— 标题含 `.pdf` + 无标题栏 + 铺满整屏（≥97%）
-  - 任意窗口全屏（v1.3.2 新增，独立开关、默认开）：不管什么软件，前台窗口无标题栏且铺满整屏（含任务栏，≥97%）并按稳定 1.2 秒，就当作开讲；桌面 / 任务栏 / 任务视图这类系统窗口被排除。全屏看视频也会触发，嫌灵敏就在设置里关掉
+  - 任意窗口全屏（v1.3.2 提供、v1.3.3 起默认关闭）：打开开关后，不管什么软件，前台窗口无标题栏且铺满整屏（含任务栏，≥97%）并稳定 1.2 秒，就当作开讲；桌面 / 任务栏 / 任务视图这类系统窗口被排除。因为对全屏视频同样生效，出厂默认关，需要时才在设置里打开
   - 状态还要**稳定保持 1.2 秒**才起表；把 PPT / PDF 最大化只是编辑窗口，不会触发
 - **点击穿透（带逃生口）**：时钟只是「贴」在屏幕上，翻页、批注、切窗口完全不受影响；右侧两个圆圈（设置 / 关闭）始终可点，不用记快捷键也能退出穿透
 - **默认静音**：到点不响铃（现场突然「叮」一声很尴尬），需要时可开
@@ -86,7 +86,7 @@
 - [Actions](https://github.com/66SHUN66/FloatingClock/actions) 里的 **Artifacts**（每次构建）
 - [Releases](https://github.com/66SHUN66/FloatingClock/releases) 里的 exe（打 `v*` tag 时自动发布）
 
-最新版直接点这里：[**v1.3.2 下载**](https://github.com/66SHUN66/FloatingClock/releases/latest)。详细用法见 [使用说明](docs/usage-zh.md)。
+最新版直接点这里：[**v1.3.3 下载**](https://github.com/66SHUN66/FloatingClock/releases/latest)。详细用法见 [使用说明](docs/usage-zh.md)。
 
 > `FloatingClock.exe` = 英文界面；`FloatingClock-ZH.exe` = 中文界面。两者是同一份源码的两个构建。
 
@@ -148,7 +148,7 @@ alpha=0.95            # 不透明度
 font=Bahnschrift      # 字体族
 bold=1 autofit=1 fontpx=100 spacing=2 shadow=1
 showseconds=1 hour24=1 showdate=1
-topmost=1 locked=0 clickthrough=0 pptauto=1 fullauto=1
+topmost=1 locked=0 clickthrough=0 pptauto=1 fullauto=0
 countdownsecs=300 preroll=3 beep=0 warnred=1 flashcolon=1
 caption=              # 底部文字，留空 = 自动
 lang=zh               # zh / en
@@ -165,6 +165,7 @@ lang=zh               # zh / en
 | **v1.0** | 时钟 / 倒计时 / 秒表、自由缩放、配色与字体、点击穿透、全局热键 |
 | **v1.1** | 版本号与作者署名、倒计时 1 秒精度 + `±1s`、超时读数、默认静音、工具条随窗缩放、窗口大小滑块、快捷键表移到模式切换器右侧 |
 | **v1.2** | 设置页可最小化、PDF 全屏演示自动开始计时、底部文字自定义（5 个占位符）、设置页内中英切换 |
+| **v1.3.3** | 「任意窗口全屏时自动开始倒计时」改为**默认关闭**（opt-in），出厂只保留 PPT / PDF 严格判据，避免全屏看视频误起表 |
 | **v1.3.2** | 新增「任意窗口全屏时自动开始倒计时」独立开关（默认开）：任何无标题栏 + 铺满整屏的窗口都算开讲，桌面 / 任务栏 / 任务视图等系统窗口用类名黑名单排除；全屏开关是 PPT 开关的超集，即使关掉「PPT / PDF 自动开始」也能兜底起表 |
 | **v1.3.1** | 修 WPS 演示放映不识别：WPS 放映窗口是 Qt 窗口（`Qt5QWindowIcon`），老判定只认 `screenClass` 系列；改为「进程 `wpp.exe` + 无边框 + 铺满整屏」判定，实机对照通过（编辑器前台不起表、F5 放映才起表） |
 | **v1.3** | 开始前预备倒计时（默认 3 秒 / 0 可关 / 空格可取消）；穿透状态右侧保留「设置 / 关闭」两个可点圆圈（改 `WM_NCHITTEST` 局部放行，不再用 `WS_EX_TRANSPARENT`）；放映检测收紧为「真放映窗口 + 无标题栏 + 铺满整屏 ≥97% + 稳定 1.2 秒」，PPT / PDF 最大化不再误起表 |

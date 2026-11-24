@@ -1,4 +1,4 @@
-# FloatingClock · v1.3.2
+# FloatingClock · v1.3.3
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-ff6700.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011-0078d4.svg)](#)
@@ -54,7 +54,7 @@ Most presentation timers are rigid: fixed window size, fixed colours, countdown 
 
 **Made for presenting**
 - **Get-ready pre-roll** (v1.3): 0–10 s, default 3 s. Auto-start counts 3-2-1 first, so the real countdown begins when you actually stand at the first slide. Space cancels it.
-- **Auto-start on playback**: only a *real* slideshow starts the timer — PowerPoint / WPS show windows (`screenClass`, `wppScreen`, `KWppScreen`), frameless and covering ≥ 97 % of the screen including the taskbar. WPS Presentation is detected by its Qt show window (`Qt5QWindowIcon` + process `wpp.exe`, frameless, ≥ 97 %) since v1.3.1. For PDF the title must contain `.pdf`, the window must be frameless and fill the screen (≥ 97 %); the state has to hold for 1.2 s. Since v1.3.2 a second, independent switch also covers *any* frameless window that owns the whole screen — the desktop, taskbar and Task View overlays are excluded, but a full-screen video does count, so switch it off if that feels too eager. A maximised PowerPoint / Acrobat window no longer starts anything.
+- **Auto-start on playback**: only a *real* slideshow starts the timer — PowerPoint / WPS show windows (`screenClass`, `wppScreen`, `KWppScreen`), frameless and covering ≥ 97 % of the screen including the taskbar. WPS Presentation is detected by its Qt show window (`Qt5QWindowIcon` + process `wpp.exe`, frameless, ≥ 97 %) since v1.3.1. For PDF the title must contain `.pdf`, the window must be frameless and fill the screen (≥ 97 %); the state has to hold for 1.2 s. Since v1.3.2 a second, independent switch also covers *any* frameless window that owns the whole screen — the desktop, taskbar and Task View overlays are excluded, but a full-screen video does count, so from v1.3.3 it ships OFF and has to be enabled in Settings. A maximised PowerPoint / Acrobat window no longer starts anything.
 - **Click-through with escape hatches** (v1.3) so the overlay never blocks paging or annotation, while two small circles on the right edge (settings / quit) stay clickable
 - **Silent by default**: no beep at zero unless you enable it
 
@@ -79,7 +79,7 @@ Most presentation timers are rigid: fixed window size, fixed colours, countdown 
 
 `FloatingClock.exe` is the English edition, `FloatingClock-ZH.exe` the Chinese one — same source, two builds.
 
-Latest build: [**v1.3.2 release**](https://github.com/66SHUN66/FloatingClock/releases/latest). The Chinese user guide lives in [docs/usage-zh.md](docs/usage-zh.md).
+Latest build: [**v1.3.3 release**](https://github.com/66SHUN66/FloatingClock/releases/latest). The Chinese user guide lives in [docs/usage-zh.md](docs/usage-zh.md).
 
 **Build it yourself** — only the .NET Framework compiler bundled with Windows is needed, no Visual Studio:
 
@@ -136,7 +136,7 @@ x=.. y=.. w=.. h=..   # logical pixels at 96 dpi
 bg=#101014  fg=#ffffff  alpha=0.95
 font=Bahnschrift  bold=1 autofit=1 fontpx=100 spacing=2 shadow=1
 showseconds=1 hour24=1 showdate=1
-topmost=1 locked=0 clickthrough=0 pptauto=1 fullauto=1
+topmost=1 locked=0 clickthrough=0 pptauto=1 fullauto=0
 countdownsecs=300 preroll=3 beep=0 warnred=1 flashcolon=1
 caption=              # footer text, empty = automatic
 lang=zh               # zh / en
@@ -153,6 +153,7 @@ Delete the file to restore factory settings; crashes are logged to `error.log` n
 | **v1.0** | Clock / countdown / stopwatch, free scaling, colours & fonts, click-through, global hotkeys |
 | **v1.1** | Version + author stamp, 1-second countdown precision with ±1s nudge, overtime read-out, silent by default, toolbar scales with the window, window-size slider, shortcut sheet moved next to the mode switch |
 | **v1.2** | Settings window can be minimised, auto-start on full-screen PDF playback, custom footer text with 5 placeholders, in-app Chinese/English switch |
+| **v1.3.3** | "Start when any window goes full screen" now ships **off** (opt-in): out of the box only the strict PPT / PDF rule starts the timer, so a full-screen video cannot surprise you. The switch is still in Settings → Window behaviour |
 | **v1.3.2** | New independent switch "start when any window goes full screen" (on by default): any frameless window covering the whole screen counts as the talk starting, with a class blacklist dropping the desktop, taskbar and Task View windows |
 | **v1.3.1** | WPS Presentation shows were not detected at all: their show window is Qt-based (`Qt5QWindowIcon`), while the old rule only matched `screenClass`. Now matched by process `wpp.exe` + frameless + full-screen coverage — verified live (editor maximised: no start; F5 show: starts) |
 | **v1.3** | Get-ready pre-roll countdown (3 s by default, 0 = off); click-through keeps a settings and a quit circle on the right edge (hit-testing via `WM_NCHITTEST` instead of `WS_EX_TRANSPARENT`); stricter playback detection — real show window, frameless, ≥ 97 % coverage, stable for 1.2 s |

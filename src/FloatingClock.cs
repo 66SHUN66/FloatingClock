@@ -39,7 +39,7 @@ namespace FloatingClockApp
         public static bool OpenSettingsOnStart = false;
 
         // Shown in the settings header, the footer and the taskbar tooltip.
-        public const string Ver = "1.3.2";
+        public const string Ver = "1.3.3";
         public const string Author = "SHUN";
 
         // Language baked into this build; a config value can override it at run time.
@@ -194,9 +194,8 @@ namespace FloatingClockApp
         public bool PptAuto = false;
         // Second trigger, independent of the PPT/PDF rule: any frameless window that
         // covers the whole screen (a full-screen video, a viewer, anything) starts
-        // the countdown. Off by default? No - it is what most people mean by
-        // "my talk started", so it ships on and can be switched off.
-        public bool FullAuto = true;
+        // the countdown. Ships OFF - it is the broadest rule, so it stays opt-in.
+        public bool FullAuto = false;
         public int CountdownSecs = 300;
         // "Get ready" countdown that runs before the real countdown starts, so a
         // speaker can click "play" and only then walk to the first slide.
